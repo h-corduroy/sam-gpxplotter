@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GPX Catalog</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@300;400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --text: #000000;
+        --muted: #333333;
+        --bg: #ffffff;
+        --panel: #ffffff;
+        --purple: #b4afff;
+        --coral: #ffb4af;
+        --mint: #afffb4;
+        --lime: #ebffb1;
+        --cyan: #b1ffec;
+        --pink: #ffb1c4;
+        --pastels: #b4afff, #ffb4af, #afffb4, #ebffb1, #b1ffec, #ffb1c4;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        font-family: "Roboto", Helvetica, Arial, sans-serif;
+        font-weight: 300;
+        color: var(--text);
+        background: var(--bg);
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+      aside {
+        width: 320px;
+        flex: 0 0 320px;
+        background: var(--panel);
+        border-right: 2px solid #000;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 4px 0 #000;
+      }
+      .brand {
+        padding: 20px 20px 14px;
+        border-bottom: 2px solid #000;
+      }
+      .brand h1 {
+        margin: 0;
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 28px;
+        font-weight: 400;
+        letter-spacing: 0.5px;
+      }
+      .brand p { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+      .upload-row {
+        margin-top: 14px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .upload-btn {
+        flex: 1;
+        border: 2px solid #000;
+        background: var(--purple);
+        color: var(--text);
+        padding: 12px 14px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 700;
+        box-shadow: 4px 4px #000;
+        transition: background 0.12s ease, font-weight 0.12s ease;
+      }
+      .upload-btn:hover:not(:disabled) {
+        background: #fff;
+        font-weight: 700;
+      }
+      .upload-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      #file-input { display: none; }
+      .list { overflow-y: auto; padding: 12px; flex: 1; }
+      .item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 2px solid #000;
+        background: var(--item-bg, #fff);
+        color: var(--text);
+        padding: 12px 14px;
+        margin: 0 0 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 700;
+        box-shadow: 3px 3px #000;
+        transition: background 0.12s ease, box-shadow 0.12s ease;
+      }
+      .item:hover {
+        background: #fff;
+        box-shadow: 4px 4px #000;
+      }
+      .item.active {
+        background: #fff;
+        box-shadow: 4px 4px #000;
+      }
+      .item .name { font-weight: 700; }
+      .item .file {
+        display: block;
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .status {
+        padding: 14px 20px;
+        font-size: 13px;
+        color: var(--muted);
+        border-top: 2px solid #000;
+        background: var(--lime);
+      }
+      main {
+        flex: 1;
+        position: relative;
+        background: #fff;
+        border-left: 0;
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: block;
+      }
+      .placeholder {
+        position: absolute;
+        inset: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 700;
+        padding: 24px;
+        text-align: center;
+        border: 2px solid #000;
+        border-radius: 5px;
+        background: var(--coral);
+        box-shadow: 4px 4px #000;
+      }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <div class="brand">
+        <h1>GPX Catalog</h1>
+        <p>Pick a track to view its route on the map.</p>
+        <div class="upload-row">
+          <input id="file-input" type="file" accept=".gpx" />
+          <button id="upload-btn" class="upload-btn" type="button">
+            Upload GPX
+          </button>
+        </div>
+      </div>
+      <div id="list" class="list"></div>
+      <div id="status" class="status">Loading catalog…</div>
+    </aside>
+    <main>
+      <div id="placeholder" class="placeholder">
+        Select a track from the list to display its route.
+      </div>
+      <iframe id="map" title="Route map" style="display: none"></iframe>
+    </main>
+
+    <script>
+      const listEl = document.getElementById("list");
+      const statusEl = document.getElementById("status");
+      const mapEl = document.getElementById("map");
+      const placeholderEl = document.getElementById("placeholder");
+      const uploadBtn = document.getElementById("upload-btn");
+      const fileInput = document.getElementById("file-input");
+
+      const PORTFOLIO_COLORS = [
+        "#B4AFFF",
+        "#FFB4AF",
+        "#AFFFB4",
+        "#EBFFB1",
+        "#B1FFEC",
+        "#FFB1C4",
+      ];
+
+      function selectTrack(button, filename) {
+        document
+          .querySelectorAll(".item.active")
+          .forEach((el) => el.classList.remove("active"));
+        button.classList.add("active");
+        placeholderEl.style.display = "none";
+        mapEl.style.display = "block";
+        mapEl.src = `/map/${encodeURIComponent(filename)}`;
+      }
+
+      function findTrackButton(filename) {
+        return listEl.querySelector(
+          `.item[data-filename="${CSS.escape(filename)}"]`
+        );
+      }
+
+      async function loadTracks(selectFilename) {
+        try {
+          const res = await fetch("/api/tracks");
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const tracks = await res.json();
+          listEl.innerHTML = "";
+          if (tracks.length === 0) {
+            statusEl.textContent = "No GPX files found in gpx_files/.";
+            return;
+          }
+          tracks.forEach((track, index) => {
+            const button = document.createElement("button");
+            button.className = "item";
+            button.dataset.filename = track.filename;
+            button.style.setProperty(
+              "--item-bg",
+              PORTFOLIO_COLORS[index % PORTFOLIO_COLORS.length]
+            );
+            button.innerHTML =
+              `<span class="name"></span>` +
+              `<span class="file"></span>`;
+            button.querySelector(".name").textContent = track.name;
+            button.querySelector(".file").textContent = track.filename;
+            button.addEventListener("click", () =>
+              selectTrack(button, track.filename)
+            );
+            listEl.appendChild(button);
+          });
+          statusEl.textContent = `${tracks.length} track(s)`;
+          if (selectFilename) {
+            const button = findTrackButton(selectFilename);
+            if (button) selectTrack(button, selectFilename);
+          }
+        } catch (err) {
+          statusEl.textContent = `Failed to load catalog: ${err.message}`;
+        }
+      }
+
+      async function uploadTrack(file) {
+        uploadBtn.disabled = true;
+        statusEl.textContent = "Uploading…";
+        try {
+          const body = new FormData();
+          body.append("file", file);
+          const res = await fetch("/api/tracks", { method: "POST", body });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            const detail = data.detail;
+            const message = Array.isArray(detail)
+              ? detail.map((item) => item.msg).join(", ")
+              : detail || `HTTP ${res.status}`;
+            throw new Error(message);
+          }
+          await loadTracks(data.filename);
+          statusEl.textContent = `Uploaded ${data.filename}`;
+        } catch (err) {
+          statusEl.textContent = `Upload failed: ${err.message}`;
+        } finally {
+          uploadBtn.disabled = false;
+          fileInput.value = "";
+        }
+      }
+
+      uploadBtn.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files[0];
+        if (file) uploadTrack(file);
+      });
+
+      loadTracks();
+    </script>
+  </body>
+</html>

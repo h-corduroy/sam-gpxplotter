@@ -182,15 +182,23 @@ def add_marker_at(the_map, segment, index, tooltip, **kwargs):
         Arguments passed on to :py:class:`folim.Icon`.
 
     """
-    time = segment["time"][index].strftime("%A %B %d, %Y: %H:%M:%S")
-    if index == 0:
-        txt = f"<b>Start:</b> {time}"
-    elif index == -1:
+    if "time" in segment:
+        time = segment["time"][index].strftime("%A %B %d, %Y: %H:%M:%S")
+        if index == 0:
+            txt = f"<b>Start:</b> {time}"
+        elif index == -1:
+            dist = segment["distance"][index] / 1000.0
+            txt = f"<b>End:</b> {time}</br><b>Distance:</b> {dist:.2f} km"
+        else:
+            dist = segment["distance"][index] / 1000.0
+            txt = f"<b>Time:</b>{time}</br><b>Distance:</b> {dist:.2f} km"
+    elif index == -1 and "distance" in segment:
         dist = segment["distance"][index] / 1000.0
-        txt = f"<b>End:</b> {time}</br><b>Distance:</b> {dist:.2f} km"
+        txt = f"<b>End</b></br><b>Distance:</b> {dist:.2f} km"
+    elif index == 0:
+        txt = "<b>Start</b>"
     else:
-        dist = segment["distance"][index] / 1000.0
-        txt = f"<b>Time:</b>{time}</br><b>Distance:</b> {dist:.2f} km"
+        txt = tooltip
     marker = folium.Marker(
         location=segment["latlon"][index],
         tooltip=tooltip,

@@ -1,0 +1,5 @@
+fastapi
+python-multipart
+uvicorn[standard]
+# Plus the gpxplotter package from this repo:
+#   pip install -e ..
