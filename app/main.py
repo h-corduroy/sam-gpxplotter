@@ -2,6 +2,7 @@
 
 Routes:
     GET /                 -> the catalog UI (static HTML page).
+    GET /theme.css        -> shared design tokens (CSS custom properties).
     GET /api/tracks       -> JSON list of available GPX files.
     POST /api/tracks      -> upload a GPX file into the catalog.
     GET /map/{filename}   -> standalone Folium map HTML for one GPX file.
@@ -12,8 +13,15 @@ from pathlib import Path
 import branca.colormap as cm
 import folium
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 
+from app.theme import (
+    BG,
+    PLAIN_ROUTE_COLOR,
+    PORTFOLIO_COLORS,
+    ROUTE_OUTLINE_COLOR,
+    theme_css,
+)
 from gpxplotter import (
     add_segment_to_map,
     create_folium_map,
@@ -29,33 +37,24 @@ GPX_DIR = (BASE_DIR.parent / "gpx_files").resolve()
 # without these (e.g. no heart-rate data) fall back to a plain line.
 PREFERRED_METRICS = ("hr", "velocity-level", "elevation")
 
-# Portfolio palette — slightly richer than lounge.css for route visibility.
-PORTFOLIO_ROUTE_COLORS = (
-    "#A090FF",
-    "#FF948C",
-    "#7AE88A",
-    "#D4E878",
-    "#5ADCCC",
-    "#FF94B0",
-)
 ROUTE_COLORMAP = cm.LinearColormap(
-    colors=list(PORTFOLIO_ROUTE_COLORS),
+    colors=list(PORTFOLIO_COLORS),
     vmin=0,
     vmax=1,
 )
-PLAIN_ROUTE_STYLE = {"color": "#5A4AD8", "weight": 5}
-ROUTE_OUTLINE_STYLE = {"color": "#000000", "weight": 12, "opacity": 1}
+PLAIN_ROUTE_STYLE = {"color": PLAIN_ROUTE_COLOR, "weight": 5}
+ROUTE_OUTLINE_STYLE = {"color": ROUTE_OUTLINE_COLOR, "weight": 12, "opacity": 1}
 
 # Desaturate basemap tiles only; overlays (route, markers) stay in other panes.
-MAP_TILE_STYLE = """
+MAP_TILE_STYLE = f"""
 <style>
-html, body { background: #fff; }
-.leaflet-tile-pane {
+html, body {{ background: {BG}; }}
+.leaflet-tile-pane {{
   filter: saturate(0.4) brightness(1.05);
-}
-.leaflet-overlay-pane {
+}}
+.leaflet-overlay-pane {{
   filter: saturate(1.2);
-}
+}}
 </style>
 """
 
@@ -130,6 +129,11 @@ def add_outlined_segment(the_map, segment, **kwargs):
     """Draw a dark casing under the route so it reads on the basemap."""
     folium.PolyLine(segment["latlon"], **ROUTE_OUTLINE_STYLE).add_to(the_map)
     add_segment_to_map(the_map, segment, **kwargs)
+
+
+@app.get("/theme.css")
+def catalog_theme() -> Response:
+    return Response(content=theme_css(), media_type="text/css")
 
 
 @app.get("/", response_class=HTMLResponse)

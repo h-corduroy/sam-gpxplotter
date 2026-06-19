@@ -31,7 +31,9 @@ Follow this checklist so every feature lands consistently.
   existing safety helpers (`sanitize_gpx_filename`, `resolve_gpx_path`) for anything
   that takes a filename — never build a path from user input directly.
 - UI changes go in `app/static/index.html`. Match the existing neo-brutalist style
-  (2px black borders, hard box-shadows, the pastel `PORTFOLIO_COLORS` palette).
+  (2px black borders, hard box-shadows, the pastel `PORTFOLIO_COLORS` palette from
+  `app/theme.py`). Color tokens are served as `/theme.css`; keep map route colors in
+  `app/main.py` aligned with that module.
 
 ## 3. Handle missing data gracefully
 
