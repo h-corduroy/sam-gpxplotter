@@ -5,22 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GPX Catalog</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@300;400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@300;400;700&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        --text: #000000;
-        --muted: #333333;
-        --bg: #ffffff;
-        --panel: #ffffff;
-        --purple: #b4afff;
-        --coral: #ffb4af;
-        --mint: #afffb4;
-        --lime: #ebffb1;
-        --cyan: #b1ffec;
-        --pink: #ffb1c4;
-        --pastels: #b4afff, #ffb4af, #afffb4, #ebffb1, #b1ffec, #ffb1c4;
+        /*__THEME_VARS__*/
       }
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; }
@@ -37,14 +27,14 @@
         width: 320px;
         flex: 0 0 320px;
         background: var(--panel);
-        border-right: 2px solid #000;
+        border-right: 2px solid var(--border);
         display: flex;
         flex-direction: column;
-        box-shadow: 4px 0 #000;
+        box-shadow: var(--shadow-sidebar);
       }
       .brand {
         padding: 20px 20px 14px;
-        border-bottom: 2px solid #000;
+        border-bottom: 2px solid var(--border);
       }
       .brand h1 {
         margin: 0;
@@ -62,19 +52,19 @@
       }
       .upload-btn {
         flex: 1;
-        border: 2px solid #000;
-        background: var(--purple);
+        border: 2px solid var(--border);
+        background: var(--accent-upload);
         color: var(--text);
         padding: 12px 14px;
-        border-radius: 5px;
+        border-radius: var(--radius);
         cursor: pointer;
         font-size: 14px;
         font-weight: 700;
-        box-shadow: 4px 4px #000;
+        box-shadow: var(--shadow-md);
         transition: background 0.12s ease, font-weight 0.12s ease;
       }
       .upload-btn:hover:not(:disabled) {
-        background: #fff;
+        background: var(--bg);
         font-weight: 700;
       }
       .upload-btn:disabled {
@@ -87,25 +77,22 @@
         display: block;
         width: 100%;
         text-align: left;
-        border: 2px solid #000;
-        background: var(--item-bg, #fff);
+        border: 2px solid var(--border);
+        background: var(--item-bg, var(--bg));
         color: var(--text);
         padding: 12px 14px;
         margin: 0 0 10px;
-        border-radius: 5px;
+        border-radius: var(--radius);
         cursor: pointer;
         font-size: 14px;
         font-weight: 700;
-        box-shadow: 3px 3px #000;
+        box-shadow: var(--shadow-sm);
         transition: background 0.12s ease, box-shadow 0.12s ease;
       }
-      .item:hover {
-        background: #fff;
-        box-shadow: 4px 4px #000;
-      }
+      .item:hover,
       .item.active {
-        background: #fff;
-        box-shadow: 4px 4px #000;
+        background: var(--bg);
+        box-shadow: var(--shadow-md);
       }
       .item .name { font-weight: 700; }
       .item .file {
@@ -119,13 +106,13 @@
         padding: 14px 20px;
         font-size: 13px;
         color: var(--muted);
-        border-top: 2px solid #000;
-        background: var(--lime);
+        border-top: 2px solid var(--border);
+        background: var(--accent-status);
       }
       main {
         flex: 1;
         position: relative;
-        background: #fff;
+        background: var(--bg);
         border-left: 0;
       }
       iframe {
@@ -145,10 +132,10 @@
         font-weight: 700;
         padding: 24px;
         text-align: center;
-        border: 2px solid #000;
-        border-radius: 5px;
-        background: var(--coral);
-        box-shadow: 4px 4px #000;
+        border: 2px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--accent-placeholder);
+        box-shadow: var(--shadow-md);
       }
     </style>
   </head>
@@ -182,14 +169,7 @@
       const uploadBtn = document.getElementById("upload-btn");
       const fileInput = document.getElementById("file-input");
 
-      const PORTFOLIO_COLORS = [
-        "#B4AFFF",
-        "#FFB4AF",
-        "#AFFFB4",
-        "#EBFFB1",
-        "#B1FFEC",
-        "#FFB1C4",
-      ];
+      const PORTFOLIO_COLORS = /*__PORTFOLIO_COLORS__*/[];
 
       function selectTrack(button, filename) {
         document

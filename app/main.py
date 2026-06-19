@@ -12,8 +12,16 @@ from pathlib import Path
 import branca.colormap as cm
 import folium
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import HTMLResponse
 
+from app.theme import (
+    MAP_BACKGROUND_COLOR,
+    PLAIN_ROUTE_COLOR,
+    PORTFOLIO_ROUTE_COLORS,
+    ROUTE_OUTLINE_COLOR,
+    css_variables,
+    portfolio_colors_json,
+)
 from gpxplotter import (
     add_segment_to_map,
     create_folium_map,
@@ -29,35 +37,42 @@ GPX_DIR = (BASE_DIR.parent / "gpx_files").resolve()
 # without these (e.g. no heart-rate data) fall back to a plain line.
 PREFERRED_METRICS = ("hr", "velocity-level", "elevation")
 
-# Portfolio palette — slightly richer than lounge.css for route visibility.
-PORTFOLIO_ROUTE_COLORS = (
-    "#A090FF",
-    "#FF948C",
-    "#7AE88A",
-    "#D4E878",
-    "#5ADCCC",
-    "#FF94B0",
-)
 ROUTE_COLORMAP = cm.LinearColormap(
     colors=list(PORTFOLIO_ROUTE_COLORS),
     vmin=0,
     vmax=1,
 )
-PLAIN_ROUTE_STYLE = {"color": "#5A4AD8", "weight": 5}
-ROUTE_OUTLINE_STYLE = {"color": "#000000", "weight": 12, "opacity": 1}
+PLAIN_ROUTE_STYLE = {"color": PLAIN_ROUTE_COLOR, "weight": 5}
+ROUTE_OUTLINE_STYLE = {
+    "color": ROUTE_OUTLINE_COLOR,
+    "weight": 12,
+    "opacity": 1,
+}
 
 # Desaturate basemap tiles only; overlays (route, markers) stay in other panes.
-MAP_TILE_STYLE = """
+MAP_TILE_STYLE = f"""
 <style>
-html, body { background: #fff; }
-.leaflet-tile-pane {
+html, body {{ background: {MAP_BACKGROUND_COLOR}; }}
+.leaflet-tile-pane {{
   filter: saturate(0.4) brightness(1.05);
-}
-.leaflet-overlay-pane {
+}}
+.leaflet-overlay-pane {{
   filter: saturate(1.2);
-}
+}}
 </style>
 """
+
+INDEX_TEMPLATE = (STATIC_DIR / "index.html").read_text()
+
+
+def render_index_html() -> str:
+    """Inject shared theme tokens into the catalog UI template."""
+    html = INDEX_TEMPLATE.replace("/*__THEME_VARS__*/", css_variables())
+    return html.replace(
+        "/*__PORTFOLIO_COLORS__*/[]",
+        portfolio_colors_json(),
+    )
+
 
 app = FastAPI(title="GPX Catalog")
 
@@ -133,8 +148,8 @@ def add_outlined_segment(the_map, segment, **kwargs):
 
 
 @app.get("/", response_class=HTMLResponse)
-def index() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+def index() -> HTMLResponse:
+    return HTMLResponse(render_index_html())
 
 
 @app.get("/api/tracks")
