@@ -1,5 +1,6 @@
 altair
 branca
+flask
 folium
 jinja2
 matplotlib

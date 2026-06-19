@@ -341,7 +341,7 @@ def process_segment(segment, max_heart_rate=187):
                 segment["elapsed-time"][-1] - segment["elapsed-time"][0]
             )
             segment["average-hr"] = (
-                np.trapz(segment["hr"], segment["elapsed-time"]) / delta_time
+                np.trapezoid(segment["hr"], segment["elapsed-time"]) / delta_time
             )
     # Add elevation metrics:
     if "elevation" in segment:
