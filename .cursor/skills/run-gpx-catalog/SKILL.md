@@ -1,7 +1,6 @@
 ---
 name: run-gpx-catalog
 description: Run the GPX Catalog FastAPI app in this repo. Use when the user asks to run, start, serve, launch, or boot the app, the server, the GPX catalog, or app/main.py.
-disable-model-invocation: true
 ---
 
 # Run GPX Catalog
