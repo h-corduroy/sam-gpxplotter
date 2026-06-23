@@ -1,13 +1,15 @@
 """FastAPI app: a local catalog of GPX files rendered as Folium maps.
 
 Routes:
-    GET /                 -> the catalog UI (static HTML page).
-    GET /api/tracks       -> JSON list of available GPX files.
-    POST /api/tracks      -> upload a GPX file into the catalog.
-    GET /map/{filename}   -> standalone Folium map HTML for one GPX file.
+    GET /                         -> the catalog UI (static HTML page).
+    GET /api/tracks               -> JSON list of available GPX files.
+    POST /api/tracks              -> upload a GPX file into the catalog.
+    GET /api/tracks/{filename}/stats -> JSON summary stats for one GPX file.
+    GET /map/{filename}           -> standalone Folium map HTML for one GPX file.
 """
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import branca.colormap as cm
 import folium
@@ -17,6 +19,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from gpxplotter import (
     add_segment_to_map,
     create_folium_map,
+    gpx_elevation_gain,
     read_gpx_file,
 )
 
@@ -126,6 +129,11 @@ def pick_metric(segment: dict):
     return None
 
 
+def track_elevation_gain_m(path: Path) -> Optional[float]:
+    """Return total elevation gain for a GPX file, or None if unavailable."""
+    return gpx_elevation_gain(str(path))
+
+
 def add_outlined_segment(the_map, segment, **kwargs):
     """Draw a dark casing under the route so it reads on the basemap."""
     folium.PolyLine(segment["latlon"], **ROUTE_OUTLINE_STYLE).add_to(the_map)
@@ -174,6 +182,25 @@ async def upload_track(file: UploadFile = File(...)):
     except Exception:
         tmp_path.unlink(missing_ok=True)
         raise HTTPException(status_code=422, detail="Invalid GPX file")
+
+
+@app.get("/api/tracks/{filename}/stats")
+def track_stats(filename: str):
+    """Return summary stats for one GPX file in the catalog."""
+    path = resolve_gpx_path(filename)
+    path_str = str(path)
+    display = path.stem
+    try:
+        for track in read_gpx_file(path_str):
+            display = track_display_name(track, path.stem)
+            break
+    except Exception:
+        pass
+    return {
+        "filename": path.name,
+        "name": display,
+        "total_elevation_gain_m": track_elevation_gain_m(path),
+    }
 
 
 @app.get("/map/{filename}", response_class=HTMLResponse)
