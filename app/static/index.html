@@ -127,12 +127,22 @@
         position: relative;
         background: #fff;
         border-left: 0;
+        isolation: isolate;
       }
-      iframe {
+      .map-shell {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .map-shell iframe {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         border: 0;
         display: block;
+        z-index: 0;
       }
       .placeholder {
         position: absolute;
@@ -149,6 +159,33 @@
         border-radius: 5px;
         background: var(--coral);
         box-shadow: 4px 4px #000;
+      }
+      .elevation-overlay {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 100;
+        padding: 10px 14px;
+        border: 2px solid #000;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 4px 4px #000;
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 22px;
+        font-weight: 400;
+        letter-spacing: 0.5px;
+        line-height: 1;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      .elevation-overlay[hidden] {
+        display: none;
+      }
+      .elevation-overlay.is-loading {
+        font-family: "Roboto", Helvetica, Arial, sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
       }
     </style>
   </head>
@@ -171,14 +208,20 @@
       <div id="placeholder" class="placeholder">
         Select a track from the list to display its route.
       </div>
-      <iframe id="map" title="Route map" style="display: none"></iframe>
+      <div id="map-shell" class="map-shell" style="display: none">
+        <iframe id="map" title="Route map"></iframe>
+        <div id="elevation-overlay" class="elevation-overlay" hidden></div>
+      </div>
     </main>
 
     <script>
       const listEl = document.getElementById("list");
       const statusEl = document.getElementById("status");
+      const mapShellEl = document.getElementById("map-shell");
       const mapEl = document.getElementById("map");
       const placeholderEl = document.getElementById("placeholder");
+      const elevationOverlayEl = document.getElementById("elevation-overlay");
+      let elevationRequestId = 0;
       const uploadBtn = document.getElementById("upload-btn");
       const fileInput = document.getElementById("file-input");
 
@@ -191,14 +234,60 @@
         "#FFB1C4",
       ];
 
+      function formatElevationGain(meters) {
+        const rounded = Math.round(meters);
+        const formatted = new Intl.NumberFormat(undefined, {
+          maximumFractionDigits: 0,
+        }).format(rounded);
+        return `↑ ${formatted} m`;
+      }
+
+      function hideElevationOverlay() {
+        elevationOverlayEl.hidden = true;
+        elevationOverlayEl.classList.remove("is-loading");
+        elevationOverlayEl.textContent = "";
+      }
+
+      function showElevationLoading() {
+        elevationOverlayEl.hidden = false;
+        elevationOverlayEl.classList.add("is-loading");
+        elevationOverlayEl.textContent = "Loading elevation…";
+      }
+
+      async function loadElevationGain(filename) {
+        const requestId = ++elevationRequestId;
+        showElevationLoading();
+        try {
+          const res = await fetch(
+            `/api/tracks/${encodeURIComponent(filename)}/stats`
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          if (requestId !== elevationRequestId) return;
+          if (data.elevation_gain_m == null) {
+            hideElevationOverlay();
+            return;
+          }
+          elevationOverlayEl.classList.remove("is-loading");
+          elevationOverlayEl.textContent = formatElevationGain(
+            data.elevation_gain_m
+          );
+          elevationOverlayEl.hidden = false;
+        } catch {
+          if (requestId !== elevationRequestId) return;
+          hideElevationOverlay();
+        }
+      }
+
       function selectTrack(button, filename) {
         document
           .querySelectorAll(".item.active")
           .forEach((el) => el.classList.remove("active"));
         button.classList.add("active");
         placeholderEl.style.display = "none";
-        mapEl.style.display = "block";
+        mapShellEl.style.display = "block";
         mapEl.src = `/map/${encodeURIComponent(filename)}`;
+        loadElevationGain(filename);
       }
 
       function findTrackButton(filename) {

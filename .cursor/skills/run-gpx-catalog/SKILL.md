@@ -8,6 +8,21 @@ description: Run the GPX Catalog FastAPI app in this repo. Use when the user ask
 The app (`app/main.py`) is a FastAPI server that lists `.gpx` files from `gpx_files/`
 and renders each as an interactive Folium map.
 
+## Branch
+
+Run from the **`gpx-catalog-app`** branch — the catalog app and demo skills live here.
+Check before starting the server:
+
+```bash
+git branch --show-current   # expect gpx-catalog-app
+```
+
+If you're on another branch, switch first:
+
+```bash
+git checkout gpx-catalog-app
+```
+
 ## Run it
 
 From the repo root:

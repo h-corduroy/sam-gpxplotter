@@ -195,6 +195,8 @@ def read_segment(segment):
     data = {}
     for point in points:
         point_data = get_point_data(point)
+        if "elevation" not in point_data:
+            point_data["elevation"] = np.nan
         if any([i is None for i in data]):
             continue
         for key, val in point_data.items():
@@ -210,6 +212,58 @@ def read_segment(segment):
     if "hr" in data:
         data["hr"] = np.array(data["hr"], dtype=np.int_)
     return data
+
+
+def elevation_gain(elevations):
+    """Compute total elevation gain in metres.
+
+    Sums positive elevation deltas between consecutive track points
+    where both points have a valid (finite) elevation. Missing values
+    (NaN) break the pair — those segments are skipped.
+
+    Parameters
+    ----------
+    elevations : array_like
+        Per-point elevations, aligned with track order. Use NaN for
+        points without elevation data.
+
+    Returns
+    -------
+    float
+        Total ascent in metres. Returns ``0.0`` when fewer than two
+        valid elevations exist.
+    """
+    ele = np.asarray(elevations, dtype=float)
+    if ele.size < 2:
+        return 0.0
+    diffs = np.diff(ele)
+    valid_pairs = np.isfinite(ele[:-1]) & np.isfinite(ele[1:])
+    return float(np.sum(diffs[(diffs > 0) & valid_pairs]))
+
+
+def elevation_loss(elevations):
+    """Compute total elevation loss in metres (negative sum of descents).
+
+    Mirrors :func:`elevation_gain` but sums negative deltas between
+    consecutive points with valid elevation on both ends.
+
+    Parameters
+    ----------
+    elevations : array_like
+        Per-point elevations, aligned with track order.
+
+    Returns
+    -------
+    float
+        Total descent as a negative number (same convention as the
+        legacy ``elevation-down`` segment key).
+    """
+    ele = np.asarray(elevations, dtype=float)
+    if ele.size < 2:
+        return 0.0
+    diffs = np.diff(ele)
+    valid_pairs = np.isfinite(ele[:-1]) & np.isfinite(ele[1:])
+    return float(np.sum(diffs[(diffs < 0) & valid_pairs]))
 
 
 def get_distances(lat, lon):
@@ -345,9 +399,8 @@ def process_segment(segment, max_heart_rate=187):
             )
     # Add elevation metrics:
     if "elevation" in segment:
-        ele_diff = np.diff(segment["elevation"])
-        segment["elevation-up"] = sum(ele_diff[np.where(ele_diff > 0)[0]])
-        segment["elevation-down"] = sum(ele_diff[np.where(ele_diff < 0)[0]])
+        segment["elevation-up"] = elevation_gain(segment["elevation"])
+        segment["elevation-down"] = elevation_loss(segment["elevation"])
     # Add alias:
     if "hr" in segment:
         segment["heart rate"] = segment["hr"]
