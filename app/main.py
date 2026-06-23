@@ -3,6 +3,7 @@
 Routes:
     GET /                 -> the catalog UI (static HTML page).
     GET /api/tracks       -> JSON list of available GPX files.
+    GET /api/tracks/{filename}/stats -> elevation summary for one track.
     POST /api/tracks      -> upload a GPX file into the catalog.
     GET /map/{filename}   -> standalone Folium map HTML for one GPX file.
 """
@@ -11,12 +12,14 @@ from pathlib import Path
 
 import branca.colormap as cm
 import folium
+import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 
 from gpxplotter import (
     add_segment_to_map,
     create_folium_map,
+    elevation_gain,
     read_gpx_file,
 )
 
@@ -117,6 +120,28 @@ def has_track_points(path: str) -> bool:
     return False
 
 
+def elevation_stats_for_file(path: Path) -> dict:
+    """Return catalog metadata and total elevation gain for one GPX file."""
+    display = path.stem
+    total_gain = 0.0
+    has_elevation = False
+
+    for track in read_gpx_file(str(path)):
+        display = track_display_name(track, path.stem)
+        for segment in track.get("segments", []):
+            elevations = segment.get("elevation")
+            if elevations is None or not np.any(np.isfinite(elevations)):
+                continue
+            has_elevation = True
+            total_gain += elevation_gain(elevations)
+
+    return {
+        "filename": path.name,
+        "name": display,
+        "elevation_gain_m": round(total_gain, 1) if has_elevation else None,
+    }
+
+
 def pick_metric(segment: dict):
     """Choose a metric to color the route by, or None for a plain line."""
     for metric in PREFERRED_METRICS:
@@ -144,6 +169,13 @@ def list_tracks():
         track_entry_for_path(path)
         for path in sorted(GPX_DIR.glob("*.gpx"))
     ]
+
+
+@app.get("/api/tracks/{filename}/stats")
+def track_stats(filename: str):
+    """Return elevation summary stats for one catalog track."""
+    path = resolve_gpx_path(filename)
+    return elevation_stats_for_file(path)
 
 
 @app.post("/api/tracks")
