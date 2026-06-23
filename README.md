@@ -47,4 +47,49 @@ the_map
 ### Further examples
 
 Please see the [gallery in the documentation](https://gpxplotter.readthedocs.io/en/latest/auto_examples_maps/index.html)
-for further examples. 
+for further examples.
+
+## Web Application
+
+**gpxplotter** includes a FastAPI-based web application that provides a catalog interface for viewing and managing GPX files as interactive maps.
+
+See [MAP_API.md](MAP_API.md) for complete documentation on the web API, including:
+- API endpoints for listing, uploading, and rendering GPX files
+- Map customization and styling options
+- Security features and validation
+- Usage examples in Python, JavaScript, and curl
+
+### Quick Start
+
+```bash
+# Install dependencies
+pip install fastapi uvicorn python-multipart
+
+# Run the server
+uvicorn app.main:app --reload --port 8000
+
+# Open in browser
+open http://localhost:8000
+```
+
+## Testing
+
+The project includes comprehensive test coverage for both the library and the web API.
+
+```bash
+# Install test dependencies
+pip install pytest pytest-cov httpx
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=app --cov=gpxplotter --cov-report=html
+
+# Run specific test categories
+pytest -m api          # API endpoint tests
+pytest -m unit         # Unit tests
+pytest -m integration  # Integration tests
+```
+
+See [MAP_API.md](MAP_API.md) for detailed information about the test suite. 
