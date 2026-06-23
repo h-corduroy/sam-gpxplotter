@@ -279,6 +279,64 @@ def approximate_velocity(distance, time):
         return None
 
 
+def compute_elevation_gain(elevation):
+    """Return total elevation gain in meters for an elevation profile.
+
+    Elevation gain is the sum of positive elevation deltas between
+    consecutive points. Returns ``None`` when elevation data is missing.
+    """
+    if elevation is None:
+        return None
+    values = np.asarray(elevation, dtype=float)
+    if values.size < 2:
+        return 0.0
+    ele_diff = np.diff(values)
+    return float(np.sum(ele_diff[ele_diff > 0]))
+
+
+def compute_elevation_loss(elevation):
+    """Return total elevation loss in meters for an elevation profile.
+
+    Elevation loss is the sum of negative elevation deltas between
+    consecutive points. Returns ``None`` when elevation data is missing.
+    """
+    if elevation is None:
+        return None
+    values = np.asarray(elevation, dtype=float)
+    if values.size < 2:
+        return 0.0
+    ele_diff = np.diff(values)
+    return float(np.sum(ele_diff[ele_diff < 0]))
+
+
+def track_elevation_gain(track):
+    """Return total elevation gain in meters for all segments in a track."""
+    total = 0.0
+    found = False
+    for segment in track.get("segments", []):
+        if "elevation-up" in segment:
+            total += float(segment["elevation-up"])
+            found = True
+            continue
+        gain = compute_elevation_gain(segment.get("elevation"))
+        if gain is not None:
+            total += gain
+            found = True
+    return total if found else None
+
+
+def gpx_elevation_gain(gpxfile):
+    """Return total elevation gain in meters for all tracks in a GPX file."""
+    total = 0.0
+    found = False
+    for track in read_gpx_file(gpxfile):
+        gain = track_elevation_gain(track)
+        if gain is not None:
+            total += gain
+            found = True
+    return total if found else None
+
+
 def get_velocity(segment):
     """Attempt to estimate the velocity.
 
@@ -345,9 +403,10 @@ def process_segment(segment, max_heart_rate=187):
             )
     # Add elevation metrics:
     if "elevation" in segment:
-        ele_diff = np.diff(segment["elevation"])
-        segment["elevation-up"] = sum(ele_diff[np.where(ele_diff > 0)[0]])
-        segment["elevation-down"] = sum(ele_diff[np.where(ele_diff < 0)[0]])
+        segment["elevation-up"] = compute_elevation_gain(segment["elevation"])
+        segment["elevation-down"] = compute_elevation_loss(
+            segment["elevation"]
+        )
     # Add alias:
     if "hr" in segment:
         segment["heart rate"] = segment["hr"]

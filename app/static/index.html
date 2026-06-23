@@ -150,6 +150,39 @@
         background: var(--coral);
         box-shadow: 4px 4px #000;
       }
+      .map-stats {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 10px 14px;
+        border: 2px solid #000;
+        border-radius: 5px;
+        background: var(--mint);
+        box-shadow: 4px 4px #000;
+        pointer-events: none;
+        min-width: 120px;
+      }
+      .map-stats[hidden] {
+        display: none;
+      }
+      .map-stats-label {
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .map-stats-value {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 26px;
+        font-weight: 400;
+        letter-spacing: 0.5px;
+        line-height: 1;
+      }
     </style>
   </head>
   <body>
@@ -172,6 +205,10 @@
         Select a track from the list to display its route.
       </div>
       <iframe id="map" title="Route map" style="display: none"></iframe>
+      <div id="map-stats" class="map-stats" hidden aria-live="polite">
+        <span class="map-stats-label">Elev gain</span>
+        <span id="map-stats-value" class="map-stats-value">—</span>
+      </div>
     </main>
 
     <script>
@@ -179,6 +216,8 @@
       const statusEl = document.getElementById("status");
       const mapEl = document.getElementById("map");
       const placeholderEl = document.getElementById("placeholder");
+      const mapStatsEl = document.getElementById("map-stats");
+      const mapStatsValueEl = document.getElementById("map-stats-value");
       const uploadBtn = document.getElementById("upload-btn");
       const fileInput = document.getElementById("file-input");
 
@@ -191,6 +230,28 @@
         "#FFB1C4",
       ];
 
+      function formatElevationGain(meters) {
+        if (meters == null || Number.isNaN(meters)) return "—";
+        return `↑ ${Math.round(meters).toLocaleString()} m`;
+      }
+
+      async function loadMapStats(filename) {
+        mapStatsEl.hidden = false;
+        mapStatsValueEl.textContent = "…";
+        try {
+          const res = await fetch(
+            `/api/tracks/${encodeURIComponent(filename)}/stats`
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          mapStatsValueEl.textContent = formatElevationGain(
+            data.total_elevation_gain_m
+          );
+        } catch {
+          mapStatsValueEl.textContent = "—";
+        }
+      }
+
       function selectTrack(button, filename) {
         document
           .querySelectorAll(".item.active")
@@ -199,6 +260,7 @@
         placeholderEl.style.display = "none";
         mapEl.style.display = "block";
         mapEl.src = `/map/${encodeURIComponent(filename)}`;
+        loadMapStats(filename);
       }
 
       function findTrackButton(filename) {

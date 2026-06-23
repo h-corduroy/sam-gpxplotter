@@ -35,12 +35,20 @@ from .folium_map import (
     add_tiles_to_map,
     create_folium_map,
 )
-from .gpxread import read_gpx_file
+from .gpxread import (
+    compute_elevation_gain,
+    gpx_elevation_gain,
+    read_gpx_file,
+    track_elevation_gain,
+)
 from .mplplotting import plot_filled, plot_line
 from .version import VERSION as __version__
 
 __all__ = [
+    "compute_elevation_gain",
+    "gpx_elevation_gain",
     "read_gpx_file",
+    "track_elevation_gain",
     "create_folium_map",
     "add_segment_to_map",
     "add_tiles_to_map",
